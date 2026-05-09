@@ -182,10 +182,14 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
       <div class="login-wrap">
         <div class="login-logo">UOD<span>·</span>GEN</div>
         <div class="login-card">
-          <div class="login-title">Zaloguj się</div>
-          <input class="login-inp" id="l-email" type="email" placeholder="Adres email" autocomplete="email" onkeydown="if(event.key==='Enter')doLogin()">
-          <input class="login-inp" id="l-pass" type="password" placeholder="Hasło" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
-          <button class="btn-login" id="btn-login" onclick="doLogin()">Zaloguj się</button>
+          <div class="login-title" id="login-title">Zaloguj się</div>
+          <input class="login-inp" id="l-email" type="email" placeholder="Adres email" autocomplete="email" onkeydown="if(event.key==='Enter')doAuth()">
+          <input class="login-inp" id="l-pass" type="password" placeholder="Hasło" autocomplete="current-password" onkeydown="if(event.key==='Enter')doAuth()">
+          <input class="login-inp" id="l-pass2" type="password" placeholder="Powtórz hasło" autocomplete="new-password" onkeydown="if(event.key==='Enter')doAuth()" style="display:none">
+          <button class="btn-login" id="btn-login" onclick="doAuth()">Zaloguj się</button>
+          <div style="text-align:center;font-size:12px;color:var(--muted);margin-top:2px">
+            <span id="auth-switch-txt">Nie masz konta? </span><span id="auth-switch-lnk" onclick="switchAuthMode()" style="color:var(--orange);font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:3px">Zarejestruj się</span>
+          </div>
         </div>
       </div>
     </div>
@@ -327,6 +331,7 @@ let pendingFn = null;
 let editingMid = null;
 let _newRole = 'main';
 let _newFeeMode = 'brutto';
+let _authMode = 'login';
 
 // ─── AUTH HELPERS ─────────────────────────────────────────────────────────────
 function getUserInitials(user) {
@@ -348,6 +353,22 @@ function updProfileBtn() {
   if (!btn) return;
   btn.textContent = getUserInitials(currentUser);
   btn.style.display = 'flex';
+}
+
+function switchAuthMode() {
+  _authMode = _authMode === 'login' ? 'register' : 'login';
+  var isReg = _authMode === 'register';
+  document.getElementById('login-title').textContent = isReg ? 'Zarejestruj się' : 'Zaloguj się';
+  document.getElementById('l-pass2').style.display = isReg ? 'block' : 'none';
+  document.getElementById('btn-login').textContent = isReg ? 'Zarejestruj się' : 'Zaloguj się';
+  document.getElementById('auth-switch-txt').textContent = isReg ? 'Masz już konto? ' : 'Nie masz konta? ';
+  document.getElementById('auth-switch-lnk').textContent = isReg ? 'Zaloguj się' : 'Zarejestruj się';
+  document.getElementById('l-pass').value = '';
+  document.getElementById('l-pass2').value = '';
+}
+
+function doAuth() {
+  if (_authMode === 'register') { doRegister(); } else { doLogin(); }
 }
 
 async function doLogin() {
@@ -372,15 +393,41 @@ async function doLogin() {
   }
 }
 
+async function doRegister() {
+  var email = document.getElementById('l-email').value.trim();
+  var pass  = document.getElementById('l-pass').value;
+  var pass2 = document.getElementById('l-pass2').value;
+  if (!email || !pass) { toast('Podaj email i hasło', 'err'); return; }
+  if (pass !== pass2) { toast('Hasła nie są zgodne', 'err'); return; }
+  var btn = document.getElementById('btn-login');
+  btn.disabled = true; btn.textContent = 'Rejestracja…';
+  try {
+    var res = await sb.auth.signUp({email: email, password: pass});
+    if (res.error) throw res.error;
+    toast('Sprawdź skrzynkę i potwierdź email ✓');
+    document.getElementById('l-pass').value = '';
+    document.getElementById('l-pass2').value = '';
+    btn.disabled = false; btn.textContent = 'Zarejestruj się';
+  } catch(e) {
+    toast('Błąd rejestracji: ' + (e.message || 'nieznany błąd'), 'err');
+    btn.disabled = false; btn.textContent = 'Zarejestruj się';
+  }
+}
+
 async function doSignOut() {
   await sb.auth.signOut();
   currentUser = null;
   D = {artists: [], musicians: {}, concerts: {}};
   state = {aid: null};
   cd = {}; zt = ''; _cSel = {};
-  editingMid = null; _newRole = 'main'; _newFeeMode = 'brutto';
+  editingMid = null; _newRole = 'main'; _newFeeMode = 'brutto'; _authMode = 'login';
   var btn = document.getElementById('btn-profile');
   if (btn) btn.style.display = 'none';
+  document.getElementById('login-title').textContent = 'Zaloguj się';
+  document.getElementById('btn-login').textContent = 'Zaloguj się';
+  document.getElementById('l-pass2').style.display = 'none';
+  document.getElementById('auth-switch-txt').textContent = 'Nie masz konta? ';
+  document.getElementById('auth-switch-lnk').textContent = 'Zarejestruj się';
   show('s-login');
   setSyncState('ok');
 }
