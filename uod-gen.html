@@ -376,6 +376,9 @@ async function doSignOut() {
   await sb.auth.signOut();
   currentUser = null;
   D = {artists: [], musicians: {}, concerts: {}};
+  state = {aid: null};
+  cd = {}; zt = ''; _cSel = {};
+  editingMid = null; _newRole = 'main'; _newFeeMode = 'brutto';
   var btn = document.getElementById('btn-profile');
   if (btn) btn.style.display = 'none';
   show('s-login');
@@ -534,11 +537,14 @@ function goSettings() { show('s-set'); renderSet(); bc([{label:'Ustawienia'}]); 
 function goS2(aid) {
   if (aid != null) state.aid = aid;
   editingMid = null;
+  _newRole = 'main';
+  _newFeeMode = 'brutto';
   show('s2'); renderS2();
   bc([{label:'Artyści', fn:'goS1()'}]);
 }
 function goS3() {
   cd = {};
+  _cSel = {};
   show('s3'); renderS3();
   var a = D.artists.find(function(x){return x.id===state.aid;});
   bc([{label:'Artyści',fn:'goS1()'},{label:a.name,fn:'goS2()'}]);
