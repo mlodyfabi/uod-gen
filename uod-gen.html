@@ -33,8 +33,6 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
 .sync-dot{width:7px;height:7px;border-radius:50%;background:var(--green-m);transition:background .3s;flex-shrink:0}
 .sync-dot.saving{background:#ffd4a8;animation:spin .9s linear infinite}
 .sync-dot.err{background:#f87171}
-.btn-settings{background:rgba(255,255,255,.22);border:2px solid rgba(255,255,255,.5);border-radius:10px;padding:7px 16px;font-size:12px;color:#fff;cursor:pointer;font-family:inherit;font-weight:700;transition:all .2s}
-.btn-settings:hover{background:rgba(255,255,255,.38)}
 .content-card{background:var(--surface);border-radius:20px 20px 0 0;flex:1;display:flex;flex-direction:column;overflow:hidden}
 .screen{display:none;flex:1;flex-direction:column;overflow:hidden}
 .screen.active{display:flex;animation:fadeUp .25s ease both}
@@ -149,6 +147,20 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
 .err-msg{font-size:13px;color:var(--muted);text-align:center;line-height:1.6;max-width:320px}
 .sql-box{background:var(--surface2);border:2px solid var(--border);border-radius:12px;padding:14px;margin-top:12px;width:100%;max-width:420px}
 .sql-box pre{font-size:10px;font-family:monospace;color:#555;line-height:1.6;white-space:pre-wrap;word-break:break-all;margin-bottom:10px}
+.btn-profile{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.9);border:none;cursor:pointer;font-family:'Syne',sans-serif;font-size:12px;font-weight:800;color:var(--orange);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s}
+.btn-profile:hover{transform:scale(1.08);box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.login-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;gap:16px}
+.login-logo{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;color:var(--orange);letter-spacing:1px;margin-bottom:2px}
+.login-logo span{color:var(--green)}
+.login-card{background:var(--surface2);border:2px solid var(--border);border-radius:18px;padding:26px 22px;width:100%;max-width:340px;display:flex;flex-direction:column;gap:11px}
+.login-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text);text-align:center;margin-bottom:2px}
+.login-inp{background:#fff;border:2px solid var(--border);border-radius:10px;padding:11px 13px;font-size:14px;font-family:inherit;color:var(--text);outline:none;transition:.18s}
+.login-inp:focus{border-color:var(--orange)}
+.btn-login{background:var(--orange);color:#fff;border:none;border-radius:11px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .18s;margin-top:2px}
+.btn-login:hover{background:var(--orange-d);transform:translateY(-2px);box-shadow:0 5px 16px rgba(240,106,0,.28)}
+.btn-login:disabled{background:#ccc;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-logout{background:var(--danger);color:#fff;border:none;border-radius:11px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .18s;width:100%}
+.btn-logout:hover{background:#b02525}
 </style>
 </head>
 <body>
@@ -161,10 +173,22 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
         <div class="sync-dot" id="sync-dot"></div>
         <span id="sync-lbl"></span>
       </div>
-      <button class="btn-settings" onclick="goSettings()">⚙ Ustawienia</button>
+      <button class="btn-profile" id="btn-profile" onclick="goSettings()" style="display:none"></button>
     </div>
   </div>
   <div class="content-card">
+
+    <div class="screen" id="s-login">
+      <div class="login-wrap">
+        <div class="login-logo">UOD<span>·</span>GEN</div>
+        <div class="login-card">
+          <div class="login-title">Zaloguj się</div>
+          <input class="login-inp" id="l-email" type="email" placeholder="Adres email" autocomplete="email" onkeydown="if(event.key==='Enter')doLogin()">
+          <input class="login-inp" id="l-pass" type="password" placeholder="Hasło" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+          <button class="btn-login" id="btn-login" onclick="doLogin()">Zaloguj się</button>
+        </div>
+      </div>
+    </div>
 
     <div class="screen active" id="s-load">
       <div class="loading-wrap">
@@ -224,7 +248,9 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
 
     <div class="screen" id="s-set">
       <div class="settings-wrap">
-        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:4px">Ustawienia artystów</div>
+        <div id="set-profile"></div>
+        <hr style="border:none;border-top:2px solid var(--border);margin:20px 0">
+        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:4px">Artyści</div>
         <div style="font-size:12px;color:var(--muted);margin-bottom:16px">Dwuklik na nazwie = edycja</div>
         <div id="set-list"></div>
         <div class="s-add">
@@ -292,6 +318,7 @@ create policy "public_all" on uod_concerts for all using (true) with check (true
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let sb = null;
+let currentUser = null;
 let state = {aid: null};
 let D = {artists: [], musicians: {}, concerts: {}};
 let cd = {};
@@ -300,6 +327,94 @@ let pendingFn = null;
 let editingMid = null;
 let _newRole = 'main';
 let _newFeeMode = 'brutto';
+
+// ─── AUTH HELPERS ─────────────────────────────────────────────────────────────
+function getUserInitials(user) {
+  if (!user) return '?';
+  var dn = (user.user_metadata && user.user_metadata.display_name) || '';
+  if (dn) return dn.split(' ').map(function(w){return w[0]||'';}).join('').substring(0,2).toUpperCase();
+  var email = user.email || '';
+  return email.substring(0,2).toUpperCase();
+}
+
+function getUserDisplayName(user) {
+  if (!user) return '';
+  return (user.user_metadata && user.user_metadata.display_name) || user.email || '';
+}
+
+function updProfileBtn() {
+  if (!currentUser) return;
+  var btn = document.getElementById('btn-profile');
+  if (!btn) return;
+  btn.textContent = getUserInitials(currentUser);
+  btn.style.display = 'flex';
+}
+
+async function doLogin() {
+  var email = document.getElementById('l-email').value.trim();
+  var pass  = document.getElementById('l-pass').value;
+  if (!email || !pass) { toast('Podaj email i hasło', 'err'); return; }
+  var btn = document.getElementById('btn-login');
+  btn.disabled = true; btn.textContent = 'Logowanie…';
+  try {
+    var res = await sb.auth.signInWithPassword({email: email, password: pass});
+    if (res.error) throw res.error;
+    currentUser = res.data.user;
+    updProfileBtn();
+    show('s-load');
+    document.getElementById('load-txt').textContent = 'Ładowanie danych…';
+    await loadAll();
+    setSyncState('ok');
+    goS1();
+  } catch(e) {
+    toast('Błąd logowania: ' + (e.message || 'nieznany błąd'), 'err');
+    btn.disabled = false; btn.textContent = 'Zaloguj się';
+  }
+}
+
+async function doSignOut() {
+  await sb.auth.signOut();
+  currentUser = null;
+  D = {artists: [], musicians: {}, concerts: {}};
+  var btn = document.getElementById('btn-profile');
+  if (btn) btn.style.display = 'none';
+  show('s-login');
+  setSyncState('ok');
+}
+
+async function saveDisplayName() {
+  var val = document.getElementById('p-dname').value.trim();
+  if (!val) return;
+  try {
+    var res = await sb.auth.updateUser({data: {display_name: val}});
+    if (res.error) throw res.error;
+    currentUser = res.data.user;
+    updProfileBtn();
+    toast('Zapisano ✓');
+  } catch(e) { toast('Błąd: ' + (e.message || ''), 'err'); }
+}
+
+async function saveEmail() {
+  var val = document.getElementById('p-email').value.trim();
+  if (!val) return;
+  try {
+    var res = await sb.auth.updateUser({email: val});
+    if (res.error) throw res.error;
+    if (res.data.user) currentUser = res.data.user;
+    toast('Sprawdź skrzynkę ✓');
+  } catch(e) { toast('Błąd: ' + (e.message || ''), 'err'); }
+}
+
+async function savePassword() {
+  var val = document.getElementById('p-pass').value;
+  if (!val) return;
+  try {
+    var res = await sb.auth.updateUser({password: val});
+    if (res.error) throw res.error;
+    document.getElementById('p-pass').value = '';
+    toast('Hasło zmienione ✓');
+  } catch(e) { toast('Błąd: ' + (e.message || ''), 'err'); }
+}
 
 // ─── SYNC DOT ─────────────────────────────────────────────────────────────────
 function setSyncState(s) {
@@ -343,6 +458,14 @@ async function init() {
   document.getElementById('load-txt').textContent = 'Łączenie z bazą danych…';
   try {
     sb = supabase.createClient(SB_URL, SB_KEY);
+    var sessionRes = await sb.auth.getSession();
+    if (!sessionRes.data.session) {
+      setSyncState('ok');
+      show('s-login');
+      return;
+    }
+    currentUser = sessionRes.data.session.user;
+    updProfileBtn();
     await loadAll();
     setSyncState('ok');
     goS1();
@@ -558,7 +681,7 @@ async function addMusician() {
   var name = document.getElementById('nm-n').value.trim(); if(!name) return;
   var inst = document.getElementById('nm-i').value.trim()||'';
   var fee  = parseFloat(document.getElementById('nm-f').value)||0;
-  var row  = {artist_id:state.aid, name:name, inst:inst, fee:fee, fee_mode:_newFeeMode, role:_newRole, sort_order:(D.musicians[state.aid]||[]).length};
+  var row  = {artist_id:state.aid, name:name, inst:inst, fee:fee, fee_mode:_newFeeMode, role:_newRole, sort_order:(D.musicians[state.aid]||[]).length, user_id: currentUser ? currentUser.id : null};
   setSyncState('saving');
   try {
     var res = await sb.from('uod_musicians').insert(row).select().single();
@@ -667,7 +790,7 @@ function upC(cid,f,v){
 // askDelC removed — replaced by checkbox multi-delete
 
 async function addC(){
-  var nrow={artist_id:state.aid,date:'',city:'',sort_order:(D.concerts[state.aid]||[]).length};
+  var nrow={artist_id:state.aid,date:'',city:'',sort_order:(D.concerts[state.aid]||[]).length, user_id: currentUser ? currentUser.id : null};
   setSyncState('saving');
   try {
     var res=await sb.from('uod_concerts').insert(nrow).select().single();
@@ -682,6 +805,16 @@ async function addC(){
 
 // ─── S-SET ────────────────────────────────────────────────────────────────────
 function renderSet(){
+  var profEl = document.getElementById('set-profile');
+  if (profEl && currentUser) {
+    var dn = (currentUser.user_metadata && currentUser.user_metadata.display_name) || '';
+    profEl.innerHTML = '<div style="font-family:\'Syne\',sans-serif;font-size:20px;font-weight:800;margin-bottom:3px">Profil</div>'
+      + '<div style="font-size:12px;color:var(--muted);margin-bottom:14px">' + escQ(currentUser.email||'') + '</div>'
+      + '<div class="s-add" style="margin-top:0;margin-bottom:10px"><input class="s-add-inp" id="p-dname" placeholder="Nazwa wyświetlana" value="' + escQ(dn) + '"><button class="btn-g" onclick="saveDisplayName()">Zapisz</button></div>'
+      + '<div class="s-add" style="margin-top:0;margin-bottom:10px"><input class="s-add-inp" id="p-email" type="email" placeholder="Nowy email"><button class="btn-g" onclick="saveEmail()">Zapisz</button></div>'
+      + '<div class="s-add" style="margin-top:0;margin-bottom:14px"><input class="s-add-inp" id="p-pass" type="password" placeholder="Nowe hasło"><button class="btn-g" onclick="savePassword()">Zapisz</button></div>'
+      + '<button class="btn-logout" onclick="doSignOut()">Wyloguj</button>';
+  }
   document.getElementById('set-list').innerHTML=D.artists.map(function(a){
     return '<div class="s-item" id="sa-'+a.id+'">'
       +'<span style="font-size:13px;font-weight:700;cursor:pointer;border-bottom:1.5px dashed transparent;transition:border-color .15s" '
@@ -717,7 +850,7 @@ async function addArtist(){
   var name=inp.value.trim(); if(!name)return;
   setSyncState('saving');
   try{
-    var res=await sb.from('uod_artists').insert({name:name,sort_order:D.artists.length}).select().single();
+    var res=await sb.from('uod_artists').insert({name:name,sort_order:D.artists.length, user_id: currentUser ? currentUser.id : null}).select().single();
     if(res.error)throw res.error;
     D.artists.push({id:res.data.id,name:res.data.name});
     D.musicians[res.data.id]=[]; D.concerts[res.data.id]=[];
