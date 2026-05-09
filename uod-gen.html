@@ -954,7 +954,7 @@ function genXlsx(){
   sel.forEach(function(m,i){
     var mcd=cd[m.id]||{};
     var active=concerts.filter(function(c){var cc=mcd[c.id];return cc&&cc.on;});
-    var datesStr=active.map(function(c){return c.date+(c.city?' w '+c.city:'');}).join(', ');
+    var datesStr=active.map(function(c){return c.date+(c.city?' '+c.city:'');}).join(', ');
     var tresc='Występ artystyczny w zespole '+a.name+' na koncertach - '+datesStr;
     var totalN=concerts.reduce(function(s,c){var cc=mcd[c.id];return s+(cc&&cc.on&&cc.mode==='netto'?parseFloat(cc.fee)||0:0);},0);
     var totalB=concerts.reduce(function(s,c){var cc=mcd[c.id];return s+(cc&&cc.on&&cc.mode==='brutto'?parseFloat(cc.fee)||0:0);},0);
