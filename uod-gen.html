@@ -570,6 +570,25 @@ async function addMusician() {
 }
 
 // ─── S3 ───────────────────────────────────────────────────────────────────────
+var _cSel = {}; // zaznaczone koncerty do usunięcia
+
+function togC(cid, v) { _cSel[cid] = v; zt=document.getElementById('zt')?document.getElementById('zt').value:zt; renderS3(); }
+function togAllC(v) { (D.concerts[state.aid]||[]).forEach(function(c){ _cSel[c.id]=v; }); zt=document.getElementById('zt')?document.getElementById('zt').value:zt; renderS3(); }
+function askDelCheckedC() {
+  var ids = Object.keys(_cSel).filter(function(id){ return _cSel[id]; });
+  if (!ids.length) return;
+  openModal('Usuń zaznaczone?', 'Usunąć <strong>'+ids.length+'</strong> dat?<br><span style="font-size:11px;color:#aaa">Znikną u wszystkich muzyków.</span>', async function(){
+    for (var i=0; i<ids.length; i++) {
+      await dbSave(function(id){ return function(){ return sb.from('uod_concerts').delete().eq('id',id); }; }(ids[i]));
+      D.concerts[state.aid] = D.concerts[state.aid].filter(function(x){ return x.id !== ids[i]; });
+      Object.keys(cd).forEach(function(mid){ if(cd[mid]) delete cd[mid][ids[i]]; });
+    }
+    _cSel = {};
+    zt=document.getElementById('zt')?document.getElementById('zt').value:zt;
+    renderS3();
+  });
+}
+
 function renderS3() {
   var aid = state.aid;
   var sel = (D.musicians[aid]||[]).filter(function(m){return m.sel;});
@@ -578,13 +597,24 @@ function renderS3() {
     if(!cd[m.id])cd[m.id]={};
     concerts.forEach(function(c){if(!cd[m.id][c.id])cd[m.id][c.id]={on:true,fee:m.fee,mode:m.feeMode||'brutto'};});
   });
+  var allChecked = concerts.length > 0 && concerts.every(function(c){ return _cSel[c.id]; });
+  var anyChecked = concerts.some(function(c){ return _cSel[c.id]; });
   var h = '<input class="zt-input" id="zt" placeholder="Tytuł zlecenia (np. kwiecień 2025)" value="'+escQ(zt)+'" oninput="zt=this.value">'
-    +'<div class="concerts-block"><div class="block-title">Daty i miejsca koncertów</div><div id="cdef-list">';
+    +'<div class="concerts-block">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px">'
+    +'<div class="block-title" style="margin-bottom:0">Daty i miejsca koncertów</div>'
+    +'<div style="display:flex;align-items:center;gap:8px">'
+    +(concerts.length ? '<label style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--muted);cursor:pointer"><input type="checkbox" '+(allChecked?'checked':'')+' onchange="togAllC(this.checked)" style="width:15px;height:15px;accent-color:var(--danger)"> wszystkie</label>' : '')
+    +(anyChecked ? '<button class="btn-del" style="align-self:auto" onclick="askDelCheckedC()">🗑 Usuń zaznaczone</button>' : '')
+    +'</div></div>'
+    +'<div id="cdef-list">';
   concerts.forEach(function(c){
-    h += '<div class="cdef-row">'
+    var isSel = !!_cSel[c.id];
+    h += '<div style="display:grid;grid-template-columns:20px 1fr 1fr;gap:8px;margin-bottom:7px;align-items:center;'+(isSel?'opacity:.5':'')+'"> '
+      +'<input type="checkbox" '+(isSel?'checked':'')+' onchange="togC(\''+c.id+'\',this.checked)" style="width:15px;height:15px;accent-color:var(--danger);cursor:pointer">'
       +'<input class="cdef-inp" type="text" placeholder="DD.MM.RRRR" value="'+escQ(c.date)+'" oninput="upC(\''+c.id+'\',\'date\',this.value)">'
       +'<input class="cdef-inp" type="text" placeholder="Miasto" value="'+escQ(c.city)+'" oninput="upC(\''+c.id+'\',\'city\',this.value)">'
-      +'<button class="btn-del" onclick="askDelC(\''+c.id+'\',\''+escQ(c.date+' '+c.city)+'\')">&times;</button></div>';
+      +'</div>';
   });
   h += '</div><button class="btn-add-c" onclick="addC()">+ Dodaj datę</button></div>';
 
@@ -634,15 +664,7 @@ function upC(cid,f,v){
   if(f==='city')document.querySelectorAll('.crow-city[data-cid="'+cid+'"]').forEach(function(el){el.textContent=v||'—';});
 }
 
-function askDelC(cid,label){
-  openModal('Usuń koncert?','Usunąć <strong>'+(label||'tę datę')+'</strong>?<br><span style="font-size:11px;color:#aaa">Zniknie u wszystkich muzyków.</span>', async function(){
-    await dbSave(function(){return sb.from('uod_concerts').delete().eq('id',cid);});
-    D.concerts[state.aid]=D.concerts[state.aid].filter(function(x){return x.id!==cid;});
-    Object.keys(cd).forEach(function(mid){if(cd[mid])delete cd[mid][cid];});
-    zt=document.getElementById('zt')?document.getElementById('zt').value:zt;
-    renderS3();
-  });
-}
+// askDelC removed — replaced by checkbox multi-delete
 
 async function addC(){
   var nrow={artist_id:state.aid,date:'',city:'',sort_order:(D.concerts[state.aid]||[]).length};
