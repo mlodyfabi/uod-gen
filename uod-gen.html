@@ -497,8 +497,10 @@ function show(id) {
 }
 function bc(items) {
   document.getElementById('breadcrumb').innerHTML = items.map(function(it,i){
-    return (i ? '<span style="opacity:.45;margin:0 3px">›</span>' : '')
-      + (it.fn ? '<span class="crumb" onclick="'+it.fn+'">'+it.label+'</span>' : '<span>'+it.label+'</span>');
+    return (i ? '<span style="color:rgba(255,255,255,.4);margin:0 3px">›</span>' : '')
+      + (it.fn
+        ? '<span class="crumb" onclick="'+it.fn+'">'+it.label+'</span>'
+        : '<span style="opacity:.55">'+it.label+'</span>');
   }).join('');
 }
 
@@ -579,22 +581,23 @@ async function dbSave(fn) {
 }
 
 // ─── NAVIGATION ───────────────────────────────────────────────────────────────
-function goS1() { show('s1'); renderS1(); bc([]); }
-function goSettings() { show('s-set'); renderSet(); bc([{label:'Ustawienia'}]); }
+function goS1() { show('s1'); renderS1(); bc([{label:'Artyści'}]); }
+function goSettings() { show('s-set'); renderSet(); bc([{label:'Artyści',fn:'goS1()'},{label:'Ustawienia'}]); }
 function goS2(aid) {
   if (aid != null) state.aid = aid;
   editingMid = null;
   _newRole = 'main';
   _newFeeMode = 'brutto';
   show('s2'); renderS2();
-  bc([{label:'Artyści', fn:'goS1()'}]);
+  var a = D.artists.find(function(x){return x.id===state.aid;});
+  bc([{label:'Artyści',fn:'goS1()'},{label:a?a.name:''}]);
 }
 function goS3() {
   cd = {};
   _cSel = {};
   show('s3'); renderS3();
   var a = D.artists.find(function(x){return x.id===state.aid;});
-  bc([{label:'Artyści',fn:'goS1()'},{label:a.name,fn:'goS2()'}]);
+  bc([{label:'Artyści',fn:'goS1()'},{label:a?a.name:'',fn:'goS2()'},{label:'Zlecenie'}]);
 }
 
 // ─── MODAL ────────────────────────────────────────────────────────────────────
