@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UOD·GEN</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f06a00;--surface:#fff;--surface2:#fff8f2;--border:#e8ddd4;
+  --orange:#f06a00;--orange-d:#c45500;--orange-l:#fff0e5;--orange-m:#ffd4a8;
+  --green:#1a7a4a;--green-d:#115534;--green-l:#e8f5ee;--green-m:#a3d9bc;
+  --text:#1a1a1a;--muted:#888;--danger:#d63030;
+}
+@keyframes bounceIn{0%{transform:scale(.78) translateY(10px);opacity:0}65%{transform:scale(1.04) translateY(-2px);opacity:1}100%{transform:scale(1) translateY(0)}}
+@keyframes fadeUp{0%{transform:translateY(14px);opacity:0}100%{transform:translateY(0);opacity:1}}
+@keyframes modalIn{0%{transform:scale(.84);opacity:0}65%{transform:scale(1.03)}100%{transform:scale(1);opacity:1}}
+@keyframes toastIn{0%{transform:translateY(20px);opacity:0}100%{transform:translateY(0);opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text)}
+.app{height:100vh;display:flex;flex-direction:column;background:var(--bg);position:relative;max-width:680px;margin:0 auto}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 12px;flex-shrink:0}
+.logo{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:1px;color:#fff}
+.logo span{color:var(--green-m)}
+.breadcrumb{display:flex;align-items:center;gap:5px;font-size:12px;color:rgba(255,255,255,.8)}
+.crumb{cursor:pointer;color:#fff;font-weight:700;text-decoration:underline;text-underline-offset:3px}
+.crumb:hover{color:var(--green-m)}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.sync-indicator{display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,.7);font-weight:600}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--green-m);transition:background .3s;flex-shrink:0}
+.sync-dot.saving{background:#ffd4a8;animation:spin .9s linear infinite}
+.sync-dot.err{background:#f87171}
+.btn-settings{background:rgba(255,255,255,.22);border:2px solid rgba(255,255,255,.5);border-radius:10px;padding:7px 16px;font-size:12px;color:#fff;cursor:pointer;font-family:inherit;font-weight:700;transition:all .2s}
+.btn-settings:hover{background:rgba(255,255,255,.38)}
+.content-card{background:var(--surface);border-radius:20px 20px 0 0;flex:1;display:flex;flex-direction:column;overflow:hidden}
+.screen{display:none;flex:1;flex-direction:column;overflow:hidden}
+.screen.active{display:flex;animation:fadeUp .25s ease both}
+.loading-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.spinner{width:40px;height:40px;border:3px solid var(--orange-m);border-top-color:var(--orange);border-radius:50%;animation:spin .7s linear infinite}
+.loading-txt{font-size:13px;color:var(--muted);font-weight:600}
+.artists-wrap{flex:1;overflow-y:auto;padding:20px}
+.artists-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px}
+.artist-btn{background:var(--surface2);border:2.5px solid var(--orange-m);border-radius:16px;padding:24px 14px 20px;cursor:pointer;transition:all .2s;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;animation:bounceIn .4s ease both}
+.artist-btn:hover{border-color:var(--orange);box-shadow:0 6px 20px rgba(240,106,0,.18);transform:translateY(-3px) scale(1.02)}
+.artist-btn:active{transform:scale(.97)}
+.artist-avatar{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:19px;font-weight:800;background:var(--orange);color:#fff;transition:transform .2s}
+.artist-btn:hover .artist-avatar{transform:scale(1.1) rotate(-5deg)}
+.artist-name{font-size:13px;font-weight:700;line-height:1.3}
+.btn-add-artist{background:var(--green-l);border:2.5px dashed var(--green);border-radius:16px;padding:24px 14px 20px;cursor:pointer;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--green);font-size:13px;font-weight:700;font-family:inherit;transition:all .2s;animation:bounceIn .4s .1s ease both}
+.btn-add-artist:hover{background:var(--green-m);border-style:solid;transform:translateY(-3px) scale(1.02)}
+.add-icon{width:54px;height:54px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:26px;color:#fff;transition:transform .22s}
+.btn-add-artist:hover .add-icon{transform:rotate(90deg)}
+.s2-top{padding:14px 20px 12px;border-bottom:2px solid var(--border);flex-shrink:0}
+.s2-scroll{flex:1;overflow-y:auto;padding:12px 20px 8px}
+.screen-title{font-family:'Syne',sans-serif;font-size:19px;font-weight:800}
+.tog{display:inline-flex;border-radius:8px;border:2px solid var(--border);overflow:hidden;flex-shrink:0}
+.tog-btn{padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;border:none;font-family:inherit;transition:all .15s;white-space:nowrap;line-height:1.3}
+.tog-btn.on-g{background:var(--green);color:#fff}
+.tog-btn.on-o{background:var(--orange);color:#fff}
+.tog-btn.off{background:var(--surface2);color:#ccc}
+.mini-tog{display:inline-flex;border-radius:6px;border:1.5px solid var(--border);overflow:hidden;flex-shrink:0}
+.mini-tog-btn{padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer;border:none;font-family:inherit;transition:all .13s;white-space:nowrap}
+.mini-tog-btn.on-o{background:var(--orange);color:#fff}
+.mini-tog-btn.on-g{background:var(--green);color:#fff}
+.mini-tog-btn.off{background:var(--surface2);color:#ccc}
+.m-row{background:var(--surface2);border:2px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:8px;display:grid;grid-template-columns:22px 1fr auto;gap:10px;align-items:start;transition:border-color .15s}
+.m-row.sel{border-color:var(--green);background:var(--green-l)}
+.m-row input[type=checkbox]{width:19px;height:19px;accent-color:var(--green);cursor:pointer;margin-top:2px;flex-shrink:0}
+.m-body{display:flex;flex-direction:column;gap:6px}
+.m-names{display:flex;flex-direction:column;gap:1px;cursor:pointer}
+.m-name-display{font-size:13px;font-weight:700;border-bottom:1.5px dashed transparent;transition:border-color .15s;display:inline-block;line-height:1.4}
+.m-names:hover .m-name-display{border-bottom-color:var(--orange)}
+.m-inst-display{font-size:11px;color:var(--muted);border-bottom:1.5px dashed transparent;transition:border-color .15s;display:inline-block;line-height:1.4}
+.m-names:hover .m-inst-display{border-bottom-color:var(--muted)}
+.m-name-input{font-size:13px;font-family:inherit;border:2px solid var(--orange);border-radius:6px;padding:3px 7px;background:#fff;outline:none;width:100%}
+.m-inst-input{font-size:11px;font-family:inherit;border:2px solid var(--border);border-radius:6px;padding:3px 7px;background:#fff;outline:none;width:100%;margin-top:3px}
+.m-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fee-inp{width:84px;background:#fff;border:2px solid var(--border);border-radius:8px;padding:5px 8px;font-size:13px;font-weight:700;color:var(--orange);font-family:inherit;outline:none;text-align:right;transition:border-color .15s;-moz-appearance:textfield}
+.fee-inp::-webkit-inner-spin-button,.fee-inp::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.fee-inp:focus{border-color:var(--orange)}
+.btn-del{background:#fdeaea;border:2px solid var(--danger);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;color:var(--danger);cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap;flex-shrink:0;align-self:start}
+.btn-del:hover{background:var(--danger);color:#fff}
+.add-m-block{background:var(--orange-l);border:2px dashed var(--orange-m);border-radius:12px;padding:13px;margin-top:6px}
+.add-m-label{font-size:11px;font-weight:700;color:var(--orange);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px}
+.add-m-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.add-m-inp{background:#fff;border:2px solid var(--border);border-radius:9px;padding:8px 10px;font-size:12px;font-family:inherit;color:var(--text);outline:none;width:100%;transition:border-color .15s;-moz-appearance:textfield}
+.add-m-inp::-webkit-inner-spin-button,.add-m-inp::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.add-m-inp:focus{border-color:var(--orange)}
+.add-m-row2{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.footer-bar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px 14px;border-top:2px solid var(--border);flex-shrink:0;background:#fff;gap:8px}
+.sel-badge{font-size:12px;color:var(--green);font-weight:700;background:var(--green-l);padding:5px 13px;border-radius:20px;border:2px solid var(--green-m);white-space:nowrap}
+.btn-g{background:var(--green);color:#fff;border:none;border-radius:11px;padding:10px 22px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .18s;white-space:nowrap}
+.btn-g:hover{background:var(--green-d);transform:translateY(-2px);box-shadow:0 5px 16px rgba(26,122,74,.28)}
+.btn-g:active{transform:scale(.97)}
+.btn-g:disabled{background:#ccc;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-o{background:var(--orange);color:#fff;border:none;border-radius:11px;padding:10px 22px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .18s;white-space:nowrap}
+.btn-o:hover{background:var(--orange-d);transform:translateY(-2px);box-shadow:0 5px 16px rgba(240,106,0,.28)}
+.btn-back{background:#fff;color:var(--orange);border:2px solid var(--orange-m);border-radius:11px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .18s;white-space:nowrap}
+.btn-back:hover{border-color:var(--orange);background:var(--orange-l)}
+.s3-scroll{flex:1;overflow-y:auto;padding:16px 20px 8px}
+.zt-input{width:100%;background:var(--surface2);border:2px solid var(--border);border-radius:12px;padding:10px 14px;font-size:15px;font-weight:700;font-family:'Syne',sans-serif;color:var(--text);outline:none;margin-bottom:13px;transition:border-color .18s}
+.zt-input:focus{border-color:var(--orange)}
+.concerts-block{background:var(--surface2);border:2px solid var(--border);border-radius:14px;padding:13px 14px;margin-bottom:13px}
+.block-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.9px;color:var(--muted);margin-bottom:9px}
+.cdef-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:7px;align-items:center}
+.cdef-inp{background:#fff;border:2px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12px;font-family:inherit;color:var(--text);outline:none;width:100%;transition:.15s}
+.cdef-inp:focus{border-color:var(--orange)}
+.btn-add-c{background:var(--orange-l);border:2px solid var(--orange);border-radius:9px;padding:6px 14px;font-size:12px;font-weight:700;color:var(--orange);cursor:pointer;font-family:inherit;transition:all .15s;margin-top:2px}
+.btn-add-c:hover{background:var(--orange-m)}
+.mzlec{background:#fff;border:2px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden}
+.mzlec-head{display:flex;align-items:center;justify-content:space-between;padding:10px 13px;border-bottom:2px solid var(--border);background:var(--surface2)}
+.mzlec-name{font-size:13px;font-weight:700}
+.mzlec-inst{font-size:11px;color:var(--muted);font-weight:400}
+.crows{padding:10px 13px;display:flex;flex-direction:column;gap:8px}
+.crow{display:flex;align-items:center;gap:8px;flex-wrap:nowrap}
+.crow-city{font-size:12px;font-weight:700;flex:1}
+.crow input[type=checkbox]{width:16px;height:16px;accent-color:var(--orange)}
+.crow-date{font-size:11px;color:var(--muted);font-weight:600;white-space:nowrap}
+.crow-fee{width:78px;background:var(--orange-l);border:2px solid var(--orange-m);border-radius:8px;padding:5px 8px;font-size:12px;font-weight:700;color:var(--orange);text-align:right;font-family:inherit;outline:none;transition:.15s;-moz-appearance:textfield}
+.crow-fee::-webkit-inner-spin-button,.crow-fee::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.crow-fee:focus{border-color:var(--orange)}
+.mzlec-total{display:flex;align-items:center;justify-content:space-between;padding:9px 13px;border-top:2px solid var(--border);background:var(--green-l)}
+.total-lbl{font-size:11px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.total-val{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--green)}
+.settings-wrap{flex:1;overflow-y:auto;padding:20px}
+.s-item{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--surface2);border:2px solid var(--border);border-radius:12px;margin-bottom:8px}
+.s-item:hover{border-color:var(--orange-m)}
+.s-add{display:flex;gap:8px;margin-top:10px}
+.s-add-inp{flex:1;background:#fff;border:2px solid var(--border);border-radius:11px;padding:10px 14px;font-size:13px;font-family:inherit;color:var(--text);outline:none;transition:.18s}
+.s-add-inp:focus{border-color:var(--orange)}
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:200}
+.modal-box{background:#fff;border-radius:18px;padding:28px 26px;max-width:300px;width:90%;animation:modalIn .32s ease both;text-align:center}
+.modal-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;margin-bottom:8px}
+.modal-body{font-size:13px;color:var(--muted);margin-bottom:22px;line-height:1.55}
+.modal-btns{display:flex;gap:10px;justify-content:center}
+.btn-cancel{background:var(--surface2);color:var(--muted);border:2px solid var(--border);border-radius:10px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s}
+.btn-cancel:hover{border-color:var(--muted)}
+.btn-red{background:var(--danger);color:#fff;border:none;border-radius:10px;padding:9px 22px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s}
+.btn-red:hover{background:#b02525}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;font-size:12px;font-weight:700;padding:9px 18px;border-radius:20px;z-index:999;animation:toastIn .25s ease both;white-space:nowrap;pointer-events:none}
+.toast.ok{background:var(--green)}
+.toast.err{background:var(--danger)}
+.err-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:30px}
+.err-icon{font-size:40px}
+.err-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--danger)}
+.err-msg{font-size:13px;color:var(--muted);text-align:center;line-height:1.6;max-width:320px}
+.sql-box{background:var(--surface2);border:2px solid var(--border);border-radius:12px;padding:14px;margin-top:12px;width:100%;max-width:420px}
+.sql-box pre{font-size:10px;font-family:monospace;color:#555;line-height:1.6;white-space:pre-wrap;word-break:break-all;margin-bottom:10px}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="topbar">
+    <div class="logo">UOD<span>·</span>GEN</div>
+    <div class="breadcrumb" id="breadcrumb"></div>
+    <div class="topbar-right">
+      <div class="sync-indicator">
+        <div class="sync-dot" id="sync-dot"></div>
+        <span id="sync-lbl"></span>
+      </div>
+      <button class="btn-settings" onclick="goSettings()">⚙ Ustawienia</button>
+    </div>
+  </div>
+  <div class="content-card">
+
+    <div class="screen active" id="s-load">
+      <div class="loading-wrap">
+        <div class="spinner"></div>
+        <div class="loading-txt" id="load-txt">Łączenie z bazą danych…</div>
+      </div>
+    </div>
+
+    <div class="screen" id="s-err">
+      <div class="err-wrap">
+        <div class="err-icon">⚠️</div>
+        <div class="err-title">Błąd połączenia</div>
+        <div class="err-msg" id="err-msg"></div>
+        <div class="sql-box" id="sql-box" style="display:none">
+          <div style="font-size:11px;font-weight:700;color:var(--orange);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Uruchom ten SQL w Supabase → SQL Editor:</div>
+          <pre id="sql-pre"></pre>
+          <button class="btn-o" style="font-size:12px;padding:7px 16px" onclick="copySql()">Kopiuj SQL</button>
+        </div>
+        <button class="btn-g" style="margin-top:8px" onclick="init()">Spróbuj ponownie</button>
+      </div>
+    </div>
+
+    <div class="screen" id="s1">
+      <div class="artists-wrap">
+        <div style="font-size:11px;font-weight:700;color:#bbb;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:16px">Wybierz artystę</div>
+        <div class="artists-grid" id="artists-grid"></div>
+      </div>
+    </div>
+
+    <div class="screen" id="s2">
+      <div class="s2-top">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:42px;height:42px;border-radius:11px;background:var(--orange);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#fff;flex-shrink:0" id="s2-av"></div>
+          <div>
+            <div class="screen-title" id="s2-name"></div>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px">Zaznacz muzyków · dwuklik = edycja danych</div>
+          </div>
+        </div>
+      </div>
+      <div class="s2-scroll" id="s2-content"></div>
+      <div class="footer-bar">
+        <span class="sel-badge" id="sel-info">0 wybranych</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn-back" onclick="goS1()">← Artyści</button>
+          <button class="btn-g" id="btn-zlec" onclick="goS3()" disabled>Zlecenie →</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen" id="s3">
+      <div class="s3-scroll" id="s3-content"></div>
+      <div class="footer-bar">
+        <button class="btn-back" onclick="askBackS2()">← Muzycy</button>
+        <button class="btn-g" onclick="genXlsx()">↓ Pobierz XLSX</button>
+      </div>
+    </div>
+
+    <div class="screen" id="s-set">
+      <div class="settings-wrap">
+        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:4px">Ustawienia artystów</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:16px">Dwuklik na nazwie = edycja</div>
+        <div id="set-list"></div>
+        <div class="s-add">
+          <input class="s-add-inp" id="na-inp" placeholder="Imię i nazwisko nowego artysty…" onkeydown="if(event.key==='Enter')addArtist()">
+          <button class="btn-g" onclick="addArtist()">+ Dodaj</button>
+        </div>
+        <div style="margin-top:22px">
+          <button class="btn-o" onclick="goS1()">← Powrót do artystów</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="modal-ov" id="modal" style="display:none">
+    <div class="modal-box">
+      <div class="modal-title" id="modal-title">Potwierdź</div>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-btns">
+        <button class="btn-cancel" onclick="closeModal()">Anuluj</button>
+        <button class="btn-red" id="modal-ok">Usuń</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+// ─── SUPABASE CONFIG ─────────────────────────────────────────────────────────
+const SB_URL = 'https://cykzhunrqswpgzngpdri.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5a3podW5ycXN3cGd6bmdwZHJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNDU3NjcsImV4cCI6MjA5MzgyMTc2N30.sf_s1SjWHQRDHJfC3FrcY2UK2K4HikfBoteCX_Tz7VM';
+
+const SQL_INIT = `create table if not exists uod_artists (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  sort_order int default 0,
+  created_at timestamptz default now()
+);
+
+create table if not exists uod_musicians (
+  id uuid primary key default gen_random_uuid(),
+  artist_id uuid references uod_artists(id) on delete cascade,
+  name text not null,
+  inst text default '',
+  fee numeric default 0,
+  fee_mode text default 'brutto',
+  role text default 'main',
+  sort_order int default 0,
+  created_at timestamptz default now()
+);
+
+create table if not exists uod_concerts (
+  id uuid primary key default gen_random_uuid(),
+  artist_id uuid references uod_artists(id) on delete cascade,
+  date text default '',
+  city text default '',
+  sort_order int default 0,
+  created_at timestamptz default now()
+);
+
+alter table uod_artists enable row level security;
+alter table uod_musicians enable row level security;
+alter table uod_concerts enable row level security;
+
+create policy "public_all" on uod_artists for all using (true) with check (true);
+create policy "public_all" on uod_musicians for all using (true) with check (true);
+create policy "public_all" on uod_concerts for all using (true) with check (true);`;
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let sb = null;
+let state = {aid: null};
+let D = {artists: [], musicians: {}, concerts: {}};
+let cd = {};
+let zt = '';
+let pendingFn = null;
+let editingMid = null;
+let _newRole = 'main';
+let _newFeeMode = 'brutto';
+
+// ─── SYNC DOT ─────────────────────────────────────────────────────────────────
+function setSyncState(s) {
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-lbl');
+  dot.className = 'sync-dot' + (s !== 'ok' ? ' ' + s : '');
+  if (lbl) lbl.textContent = s === 'saving' ? 'zapisuję…' : s === 'err' ? 'błąd!' : '';
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+let _toastTimer = null;
+function toast(msg, type) {
+  type = type || 'ok';
+  clearTimeout(_toastTimer);
+  document.querySelectorAll('.toast').forEach(function(t){t.remove();});
+  var t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  _toastTimer = setTimeout(function(){t.remove();}, 2600);
+}
+
+function escQ(s) { return (s||'').replace(/&/g,'&amp;').replace(/'/g,'&#39;').replace(/"/g,'&quot;'); }
+const ini = function(n){ return n.split(' ').map(function(w){return w[0];}).join('').substring(0,2).toUpperCase(); };
+
+// ─── SHOW SCREEN ──────────────────────────────────────────────────────────────
+function show(id) {
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+  document.getElementById(id).classList.add('active');
+}
+function bc(items) {
+  document.getElementById('breadcrumb').innerHTML = items.map(function(it,i){
+    return (i ? '<span style="opacity:.45;margin:0 3px">›</span>' : '')
+      + (it.fn ? '<span class="crumb" onclick="'+it.fn+'">'+it.label+'</span>' : '<span>'+it.label+'</span>');
+  }).join('');
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+async function init() {
+  show('s-load');
+  document.getElementById('load-txt').textContent = 'Łączenie z bazą danych…';
+  try {
+    sb = supabase.createClient(SB_URL, SB_KEY);
+    await loadAll();
+    setSyncState('ok');
+    goS1();
+  } catch(e) {
+    console.error(e);
+    setSyncState('err');
+    var msg = e.message || String(e);
+    var sqlNeeded = msg.indexOf('does not exist') !== -1 || msg.indexOf('relation') !== -1 || msg.indexOf('42P01') !== -1;
+    document.getElementById('err-msg').textContent = sqlNeeded
+      ? 'Tabele nie istnieją jeszcze w bazie. Uruchom SQL poniżej w Supabase → SQL Editor, a potem kliknij "Spróbuj ponownie".'
+      : 'Nie udało się połączyć z bazą danych. Szczegóły: ' + msg;
+    var sqlBox = document.getElementById('sql-box');
+    if (sqlNeeded) { sqlBox.style.display = 'block'; document.getElementById('sql-pre').textContent = SQL_INIT; }
+    else { sqlBox.style.display = 'none'; }
+    show('s-err');
+  }
+}
+
+function copySql() {
+  navigator.clipboard.writeText(SQL_INIT).then(function(){ toast('SQL skopiowany ✓'); });
+}
+
+// ─── LOAD ALL ─────────────────────────────────────────────────────────────────
+async function loadAll() {
+  var res = await Promise.all([
+    sb.from('uod_artists').select('*').order('sort_order').order('created_at'),
+    sb.from('uod_musicians').select('*').order('sort_order').order('created_at'),
+    sb.from('uod_concerts').select('*').order('sort_order').order('created_at'),
+  ]);
+  if (res[0].error) throw res[0].error;
+  if (res[1].error) throw res[1].error;
+  if (res[2].error) throw res[2].error;
+
+  D.artists = (res[0].data || []).map(function(a){ return {id: a.id, name: a.name}; });
+  D.musicians = {};
+  D.concerts = {};
+  D.artists.forEach(function(a){ D.musicians[a.id] = []; D.concerts[a.id] = []; });
+
+  (res[1].data || []).forEach(function(m){
+    if (!D.musicians[m.artist_id]) D.musicians[m.artist_id] = [];
+    D.musicians[m.artist_id].push({id:m.id, name:m.name, inst:m.inst||'', fee:parseFloat(m.fee)||0, role:m.role||'main', feeMode:m.fee_mode||'brutto', sel:false});
+  });
+  (res[2].data || []).forEach(function(c){
+    if (!D.concerts[c.artist_id]) D.concerts[c.artist_id] = [];
+    D.concerts[c.artist_id].push({id:c.id, date:c.date||'', city:c.city||''});
+  });
+}
+
+// ─── DB SAVE WRAPPER ──────────────────────────────────────────────────────────
+async function dbSave(fn) {
+  setSyncState('saving');
+  try {
+    var res = await fn();
+    if (res && res.error) throw res.error;
+    setSyncState('ok');
+  } catch(e) {
+    console.error(e);
+    setSyncState('err');
+    toast('Błąd zapisu: ' + (e.message||'nieznany'), 'err');
+  }
+}
+
+// ─── NAVIGATION ───────────────────────────────────────────────────────────────
+function goS1() { show('s1'); renderS1(); bc([]); }
+function goSettings() { show('s-set'); renderSet(); bc([{label:'Ustawienia'}]); }
+function goS2(aid) {
+  if (aid != null) state.aid = aid;
+  editingMid = null;
+  show('s2'); renderS2();
+  bc([{label:'Artyści', fn:'goS1()'}]);
+}
+function goS3() {
+  cd = {};
+  show('s3'); renderS3();
+  var a = D.artists.find(function(x){return x.id===state.aid;});
+  bc([{label:'Artyści',fn:'goS1()'},{label:a.name,fn:'goS2()'}]);
+}
+
+// ─── MODAL ────────────────────────────────────────────────────────────────────
+function openModal(title, body, fn, okLabel) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = body;
+  document.getElementById('modal-ok').textContent = okLabel || 'Usuń';
+  pendingFn = fn;
+  document.getElementById('modal').style.display = 'flex';
+}
+function closeModal() { document.getElementById('modal').style.display = 'none'; pendingFn = null; }
+document.getElementById('modal-ok').onclick = function(){ if(pendingFn) pendingFn(); closeModal(); };
+
+// ─── S1 ───────────────────────────────────────────────────────────────────────
+function renderS1() {
+  document.getElementById('artists-grid').innerHTML =
+    D.artists.map(function(a,i){
+      return '<div class="artist-btn" style="animation-delay:'+i*.08+'s" onclick="goS2(\''+a.id+'\')">'
+        +'<div class="artist-avatar">'+ini(a.name)+'</div>'
+        +'<div class="artist-name">'+a.name+'</div></div>';
+    }).join('')
+    + '<button class="btn-add-artist" onclick="goSettings()"><div class="add-icon">+</div><span>Nowy artysta</span></button>';
+}
+
+// ─── S2 ───────────────────────────────────────────────────────────────────────
+function renderS2(noAnim) {
+  var a = D.artists.find(function(x){return x.id===state.aid;});
+  document.getElementById('s2-av').textContent = ini(a.name);
+  document.getElementById('s2-name').textContent = a.name;
+  var ms = D.musicians[state.aid] || [];
+  var sorted = [].concat(ms).sort(function(a,b){
+    return a.role==='main'&&b.role!=='main'?-1:a.role!=='main'&&b.role==='main'?1:0;
+  });
+  document.getElementById('s2-content').innerHTML =
+    sorted.map(function(m,i){return mHTML(m, noAnim?0:i*.05);}).join('') + addMForm();
+  updSel();
+}
+
+function mHTML(m, delay) {
+  var isMain = m.role === 'main';
+  var isEditingName = editingMid === m.id+':name';
+  var isEditingInst = editingMid === m.id+':inst';
+  var mainCls = 'tog-btn '+(isMain?'on-g':'off');
+  var subCls  = 'tog-btn '+(!isMain?'on-o':'off');
+  var fm = m.feeMode||'brutto';
+  var bCls = 'mini-tog-btn '+(fm==='brutto'?'on-o':'off');
+  var nCls = 'mini-tog-btn '+(fm==='netto'?'on-g':'off');
+  var mid = m.id;
+  var nameBlock = isEditingName
+    ? '<input class="m-name-input" id="en-'+mid+'" value="'+escQ(m.name)+'" onblur="saveEditField(\''+mid+'\',\'name\')" onkeydown="if(event.key===\'Enter\'||event.key===\'Escape\')this.blur()"><span class="m-inst-display" ondblclick="startEdit(\''+mid+'\',\'inst\')">'+m.inst+'</span>'
+    : isEditingInst
+    ? '<span class="m-name-display" ondblclick="startEdit(\''+mid+'\',\'name\')">'+m.name+'</span><input class="m-inst-input" id="ei-'+mid+'" value="'+escQ(m.inst)+'" onblur="saveEditField(\''+mid+'\',\'inst\')" onkeydown="if(event.key===\'Enter\'||event.key===\'Escape\')this.blur()">'
+    : '<span class="m-name-display" ondblclick="startEdit(\''+mid+'\',\'name\')">'+m.name+'</span><span class="m-inst-display" ondblclick="startEdit(\''+mid+'\',\'inst\')">'+m.inst+'</span>';
+  return '<div class="m-row'+(m.sel?' sel':'')+'" id="mr-'+mid+'" style="'+(delay?'animation:bounceIn .3s ease '+delay+'s both':'')+'">'
+    +'<input type="checkbox" '+(m.sel?'checked':'')+' onchange="togM(\''+mid+'\',this.checked)">'
+    +'<div class="m-body"><div class="m-names">'+nameBlock+'</div>'
+    +'<div class="m-controls">'
+    +'<div class="tog"><button class="'+mainCls+'" onclick="setRole(\''+mid+'\',\'main\')">Main</button><button class="'+subCls+'" onclick="setRole(\''+mid+'\',\'sub\')">Zast.</button></div>'
+    +'<input class="fee-inp" type="number" value="'+m.fee+'" onchange="updFee(\''+mid+'\',this.value)">'
+    +'<div class="mini-tog"><button class="'+bCls+'" onclick="setFeeMode(\''+mid+'\',\'brutto\')">B</button><button class="'+nCls+'" onclick="setFeeMode(\''+mid+'\',\'netto\')">N</button></div>'
+    +'</div></div>'
+    +'<button class="btn-del" onclick="askDelM(\''+mid+'\',\''+escQ(m.name)+'\')">&times; Usuń</button>'
+    +'</div>';
+}
+
+function addMForm() {
+  return '<div class="add-m-block" style="margin-top:6px"><div class="add-m-label">+ Nowy muzyk</div>'
+    +'<div class="add-m-grid"><input class="add-m-inp" id="nm-n" placeholder="Imię i nazwisko"><input class="add-m-inp" id="nm-i" placeholder="Instrument"></div>'
+    +'<div class="add-m-row2">'
+    +'<input class="add-m-inp" id="nm-f" type="number" placeholder="Kwota zł" style="width:92px">'
+    +'<div class="mini-tog"><button class="mini-tog-btn on-o" id="nfm-b" onclick="setNFM(\'brutto\')">B</button><button class="mini-tog-btn off" id="nfm-n" onclick="setNFM(\'netto\')">N</button></div>'
+    +'<div class="tog"><button class="tog-btn on-g" id="nr-main" onclick="setNR(\'main\')">Main</button><button class="tog-btn off" id="nr-sub" onclick="setNR(\'sub\')">Zast.</button></div>'
+    +'<button class="btn-g" style="padding:7px 14px;font-size:12px" onclick="addMusician()">Dodaj</button></div></div>';
+}
+
+function setNR(r){_newRole=r;document.getElementById('nr-main').className='tog-btn '+(r==='main'?'on-g':'off');document.getElementById('nr-sub').className='tog-btn '+(r==='sub'?'on-o':'off');}
+function setNFM(m){_newFeeMode=m;document.getElementById('nfm-b').className='mini-tog-btn '+(m==='brutto'?'on-o':'off');document.getElementById('nfm-n').className='mini-tog-btn '+(m==='netto'?'on-g':'off');}
+
+function startEdit(mid, field) {
+  editingMid = mid+':'+field;
+  renderS2(true);
+  setTimeout(function(){
+    var id = field==='inst'?'ei-'+mid:'en-'+mid;
+    var el = document.getElementById(id);
+    if (el){el.focus();el.select();}
+  }, 30);
+}
+
+function saveEditField(mid, field) {
+  var m = D.musicians[state.aid].find(function(x){return x.id===mid;});
+  if (m) {
+    if (field==='name'){var ni=document.getElementById('en-'+mid);if(ni&&ni.value.trim())m.name=ni.value.trim();}
+    if (field==='inst'){var ii=document.getElementById('ei-'+mid);if(ii)m.inst=ii.value.trim();}
+    dbSave(function(){return sb.from('uod_musicians').update({name:m.name,inst:m.inst}).eq('id',mid);});
+  }
+  editingMid=null; renderS2(true);
+}
+
+function setFeeMode(mid, mode) {
+  var m = D.musicians[state.aid].find(function(x){return x.id===mid;});
+  if (m){m.feeMode=mode; dbSave(function(){return sb.from('uod_musicians').update({fee_mode:mode}).eq('id',mid);}); renderS2(true);}
+}
+
+function togM(mid, v) {
+  var m = D.musicians[state.aid].find(function(x){return x.id===mid;});
+  if (m) m.sel = v;
+  var r = document.getElementById('mr-'+mid);
+  if (r) r.classList.toggle('sel', v);
+  updSel();
+}
+
+function updSel() {
+  var n = (D.musicians[state.aid]||[]).filter(function(m){return m.sel;}).length;
+  document.getElementById('sel-info').textContent = n+' wybranych';
+  var b = document.getElementById('btn-zlec'); if(b) b.disabled = n===0;
+}
+
+function updFee(mid, v) {
+  var m = D.musicians[state.aid].find(function(x){return x.id===mid;});
+  if (m){m.fee=parseFloat(v)||0; dbSave(function(){return sb.from('uod_musicians').update({fee:m.fee}).eq('id',mid);});}
+}
+
+function setRole(mid, r) {
+  var m = D.musicians[state.aid].find(function(x){return x.id===mid;});
+  if (m){m.role=r; dbSave(function(){return sb.from('uod_musicians').update({role:r}).eq('id',mid);}); renderS2(true);}
+}
+
+function askDelM(mid, name) {
+  openModal('Usuń muzyka?','Czy na pewno chcesz usunąć<br><strong>'+name+'</strong>?', async function(){
+    await dbSave(function(){return sb.from('uod_musicians').delete().eq('id',mid);});
+    D.musicians[state.aid] = D.musicians[state.aid].filter(function(x){return x.id!==mid;});
+    renderS2(true);
+  });
+}
+
+async function addMusician() {
+  var name = document.getElementById('nm-n').value.trim(); if(!name) return;
+  var inst = document.getElementById('nm-i').value.trim()||'';
+  var fee  = parseFloat(document.getElementById('nm-f').value)||0;
+  var row  = {artist_id:state.aid, name:name, inst:inst, fee:fee, fee_mode:_newFeeMode, role:_newRole, sort_order:(D.musicians[state.aid]||[]).length};
+  setSyncState('saving');
+  try {
+    var res = await sb.from('uod_musicians').insert(row).select().single();
+    if (res.error) throw res.error;
+    if (!D.musicians[state.aid]) D.musicians[state.aid]=[];
+    D.musicians[state.aid].push({id:res.data.id, name:res.data.name, inst:res.data.inst||'', fee:parseFloat(res.data.fee)||0, role:res.data.role, feeMode:res.data.fee_mode, sel:false});
+    setSyncState('ok'); renderS2(true);
+  } catch(e){ setSyncState('err'); toast('Błąd: '+(e.message||''), 'err'); }
+}
+
+// ─── S3 ───────────────────────────────────────────────────────────────────────
+function renderS3() {
+  var aid = state.aid;
+  var sel = (D.musicians[aid]||[]).filter(function(m){return m.sel;});
+  var concerts = D.concerts[aid]||[];
+  sel.forEach(function(m){
+    if(!cd[m.id])cd[m.id]={};
+    concerts.forEach(function(c){if(!cd[m.id][c.id])cd[m.id][c.id]={on:true,fee:m.fee,mode:m.feeMode||'brutto'};});
+  });
+  var h = '<input class="zt-input" id="zt" placeholder="Tytuł zlecenia (np. kwiecień 2025)" value="'+escQ(zt)+'" oninput="zt=this.value">'
+    +'<div class="concerts-block"><div class="block-title">Daty i miejsca koncertów</div><div id="cdef-list">';
+  concerts.forEach(function(c){
+    h += '<div class="cdef-row">'
+      +'<input class="cdef-inp" type="text" placeholder="DD.MM.RRRR" value="'+escQ(c.date)+'" oninput="upC(\''+c.id+'\',\'date\',this.value)">'
+      +'<input class="cdef-inp" type="text" placeholder="Miasto" value="'+escQ(c.city)+'" oninput="upC(\''+c.id+'\',\'city\',this.value)">'
+      +'<button class="btn-del" onclick="askDelC(\''+c.id+'\',\''+escQ(c.date+' '+c.city)+'\')">&times;</button></div>';
+  });
+  h += '</div><button class="btn-add-c" onclick="addC()">+ Dodaj datę</button></div>';
+
+  sel.forEach(function(m){
+    var mcd = cd[m.id]||{};
+    var totalB = concerts.reduce(function(s,c){var cc=mcd[c.id];return s+(cc&&cc.on&&cc.mode==='brutto'?parseFloat(cc.fee)||0:0);},0);
+    var totalN = concerts.reduce(function(s,c){var cc=mcd[c.id];return s+(cc&&cc.on&&cc.mode==='netto'?parseFloat(cc.fee)||0:0);},0);
+    h += '<div class="mzlec"><div class="mzlec-head"><span class="mzlec-name">'+m.name+' <span class="mzlec-inst">'+m.inst+'</span></span></div><div class="crows">';
+    if(!concerts.length) h += '<div style="font-size:12px;color:var(--muted)">Brak dat — dodaj powyżej</div>';
+    concerts.forEach(function(c){
+      var cc = mcd[c.id]||{on:true,fee:m.fee,mode:m.feeMode||'brutto'};
+      var bCls = 'mini-tog-btn '+(cc.mode==='brutto'?'on-o':'off');
+      var nCls = 'mini-tog-btn '+(cc.mode==='netto'?'on-g':'off');
+      h += '<div class="crow">'
+        +'<input type="checkbox" '+(cc.on?'checked':'')+' onchange="setCk(\''+m.id+'\',\''+c.id+'\',this.checked)">'
+        +'<span class="crow-date" data-cid="'+c.id+'">'+(c.date||'—')+'</span>'
+        +'<span class="crow-city" data-cid="'+c.id+'">'+(c.city||'—')+'</span>'
+        +'<input class="crow-fee" type="number" value="'+cc.fee+'" onchange="setFee(\''+m.id+'\',\''+c.id+'\',this.value)">'
+        +'<div class="mini-tog"><button class="'+bCls+'" onclick="setCMode(\''+m.id+'\',\''+c.id+'\',\'brutto\')">B</button><button class="'+nCls+'" onclick="setCMode(\''+m.id+'\',\''+c.id+'\',\'netto\')">N</button></div>'
+        +'</div>';
+    });
+    var sp=[];
+    if(totalB>0)sp.push('<span class="total-lbl">Brutto</span><span class="total-val" style="color:var(--orange)">'+totalB.toLocaleString('pl-PL')+' zł</span>');
+    if(totalN>0)sp.push('<span class="total-lbl">Netto</span><span class="total-val">'+totalN.toLocaleString('pl-PL')+' zł</span>');
+    if(!sp.length)sp.push('<span class="total-lbl">Suma</span><span class="total-val">0 zł</span>');
+    h += '</div><div class="mzlec-total" style="gap:18px">'+sp.join('')+'</div></div>';
+  });
+  document.getElementById('s3-content').innerHTML = h;
+}
+
+function askBackS2(){
+  zt = document.getElementById('zt')?document.getElementById('zt').value:zt;
+  openModal('Wróć do muzyków?','Niezapisane zmiany w zleceniu <strong>przepadną</strong>.<br>Czy na pewno chcesz wrócić?',function(){cd={};goS2();},'Wróć');
+}
+
+function setCMode(mid,cid,mode){if(!cd[mid])cd[mid]={};if(!cd[mid][cid])cd[mid][cid]={on:true,fee:0,mode:'brutto'};cd[mid][cid].mode=mode;zt=document.getElementById('zt')?document.getElementById('zt').value:zt;renderS3();}
+function setCk(mid,cid,v){if(!cd[mid])cd[mid]={};if(!cd[mid][cid])cd[mid][cid]={on:true,fee:0,mode:'brutto'};cd[mid][cid].on=v;zt=document.getElementById('zt')?document.getElementById('zt').value:zt;renderS3();}
+function setFee(mid,cid,v){if(!cd[mid])cd[mid]={};if(!cd[mid][cid])cd[mid][cid]={on:true,fee:0,mode:'brutto'};cd[mid][cid].fee=parseFloat(v)||0;}
+
+function upC(cid,f,v){
+  var c = D.concerts[state.aid].find(function(x){return x.id===cid;});
+  if(c){
+    c[f]=v;
+    dbSave(function(){var upd={};upd[f]=v;return sb.from('uod_concerts').update(upd).eq('id',cid);});
+  }
+  if(f==='date')document.querySelectorAll('.crow-date[data-cid="'+cid+'"]').forEach(function(el){el.textContent=v||'—';});
+  if(f==='city')document.querySelectorAll('.crow-city[data-cid="'+cid+'"]').forEach(function(el){el.textContent=v||'—';});
+}
+
+function askDelC(cid,label){
+  openModal('Usuń koncert?','Usunąć <strong>'+(label||'tę datę')+'</strong>?<br><span style="font-size:11px;color:#aaa">Zniknie u wszystkich muzyków.</span>', async function(){
+    await dbSave(function(){return sb.from('uod_concerts').delete().eq('id',cid);});
+    D.concerts[state.aid]=D.concerts[state.aid].filter(function(x){return x.id!==cid;});
+    Object.keys(cd).forEach(function(mid){if(cd[mid])delete cd[mid][cid];});
+    zt=document.getElementById('zt')?document.getElementById('zt').value:zt;
+    renderS3();
+  });
+}
+
+async function addC(){
+  var nrow={artist_id:state.aid,date:'',city:'',sort_order:(D.concerts[state.aid]||[]).length};
+  setSyncState('saving');
+  try {
+    var res=await sb.from('uod_concerts').insert(nrow).select().single();
+    if(res.error)throw res.error;
+    D.concerts[state.aid].push({id:res.data.id,date:'',city:''});
+    var sel=(D.musicians[state.aid]||[]).filter(function(m){return m.sel;});
+    sel.forEach(function(m){if(!cd[m.id])cd[m.id]={};cd[m.id][res.data.id]={on:true,fee:m.fee,mode:m.feeMode||'brutto'};});
+    zt=document.getElementById('zt')?document.getElementById('zt').value:zt;
+    setSyncState('ok'); renderS3();
+  } catch(e){setSyncState('err');toast('Błąd: '+(e.message||''),'err');}
+}
+
+// ─── S-SET ────────────────────────────────────────────────────────────────────
+function renderSet(){
+  document.getElementById('set-list').innerHTML=D.artists.map(function(a){
+    return '<div class="s-item" id="sa-'+a.id+'">'
+      +'<span style="font-size:13px;font-weight:700;cursor:pointer;border-bottom:1.5px dashed transparent;transition:border-color .15s" '
+      +'ondblclick="startEditArtist(\''+a.id+'\')" '
+      +'onmouseover="this.style.borderBottomColor=\'var(--orange)\'" '
+      +'onmouseout="this.style.borderBottomColor=\'transparent\'">'+a.name+'</span>'
+      +'<button class="btn-del" onclick="askDelA(\''+a.id+'\',\''+escQ(a.name)+'\')">✕ Usuń</button>'
+      +'</div>';
+  }).join('');
+}
+
+function startEditArtist(id){
+  var a=D.artists.find(function(x){return x.id===id;}); if(!a)return;
+  var row=document.getElementById('sa-'+id);
+  row.innerHTML='<input style="flex:1;font-size:13px;font-family:inherit;font-weight:700;border:2px solid var(--orange);border-radius:8px;padding:4px 9px;outline:none" '
+    +'id="ea-'+id+'" value="'+escQ(a.name)+'" '
+    +'onblur="saveEditArtist(\''+id+'\')" '
+    +'onkeydown="if(event.key===\'Enter\')saveEditArtist(\''+id+'\');if(event.key===\'Escape\')renderSet();">'
+    +'<button class="btn-del" onclick="askDelA(\''+id+'\',\''+escQ(a.name)+'\')">✕ Usuń</button>';
+  setTimeout(function(){var i=document.getElementById('ea-'+id);if(i){i.focus();i.select();}},20);
+}
+
+function saveEditArtist(id){
+  var inp=document.getElementById('ea-'+id); if(!inp)return;
+  var val=inp.value.trim();
+  var a=D.artists.find(function(x){return x.id===id;});
+  if(a&&val){a.name=val; dbSave(function(){return sb.from('uod_artists').update({name:val}).eq('id',id);});}
+  renderSet();
+}
+
+async function addArtist(){
+  var inp=document.getElementById('na-inp');
+  var name=inp.value.trim(); if(!name)return;
+  setSyncState('saving');
+  try{
+    var res=await sb.from('uod_artists').insert({name:name,sort_order:D.artists.length}).select().single();
+    if(res.error)throw res.error;
+    D.artists.push({id:res.data.id,name:res.data.name});
+    D.musicians[res.data.id]=[]; D.concerts[res.data.id]=[];
+    inp.value=''; setSyncState('ok'); renderSet();
+  }catch(e){setSyncState('err');toast('Błąd: '+(e.message||''),'err');}
+}
+
+function askDelA(id,name){
+  openModal('Usuń artystę?','Czy na pewno chcesz usunąć<br><strong>'+name+'</strong>?<br><span style="font-size:11px;color:#aaa">Zostaną usunięci też wszyscy muzycy i koncerty.</span>', async function(){
+    await dbSave(function(){return sb.from('uod_artists').delete().eq('id',id);});
+    D.artists=D.artists.filter(function(a){return a.id!==id;});
+    delete D.musicians[id]; delete D.concerts[id];
+    renderSet();
+  });
+}
+
+// ─── XLSX ─────────────────────────────────────────────────────────────────────
+function genXlsx(){
+  var aid=state.aid;
+  var a=D.artists.find(function(x){return x.id===aid;});
+  var sel=(D.musicians[aid]||[]).filter(function(m){return m.sel;});
+  var concerts=D.concerts[aid]||[];
+  var title=document.getElementById('zt')?document.getElementById('zt').value:zt;
+  var thin={style:'thin',color:{rgb:'000000'}};
+  var borderAll={top:thin,bottom:thin,left:thin,right:thin};
+  var yellowFill={patternType:'solid',fgColor:{rgb:'FFFF00'}};
+  var fontHdr={name:'Arial',sz:11,bold:true};
+  var fontData={name:'Arial',sz:10};
+  var alignCenterWrap={horizontal:'center',vertical:'center',wrapText:true};
+  var alignCenter={horizontal:'center',vertical:'center'};
+  var alignLeftWrap={horizontal:'left',vertical:'center',wrapText:true};
+  function cell(v,font,alignment,border,fill){
+    var c={v:v,t:typeof v==='number'?'n':'s',s:{}};
+    if(font)c.s.font=font;if(alignment)c.s.alignment=alignment;
+    if(border)c.s.border=border;if(fill)c.s.fill=fill;
+    return c;
+  }
+  var ws={};var R=0;var cols=['A','B','C','D','E','F','G'];
+  [['KAYAX UMOWY O DZIEŁO',fontHdr],[a.name,fontData],[title||'',fontData]].forEach(function(hr){
+    cols.forEach(function(col,ci){ws[col+(R+1)]=cell(ci===0?hr[0]:'',hr[1],alignCenterWrap,null,null);});
+    ws['!merges']=ws['!merges']||[];ws['!merges'].push({s:{r:R,c:0},e:{r:R,c:6}});R++;
+  });
+  ['LP','IMIĘ I NAZWISKO','TREŚĆ UMOWY/RACHUNKU/DATA I MIEJSCE KONCERTU','SUMA NETTO','SUMA BRUTTO','50%-owe koszty uzyskania przychodu TAK/NIE*','PRZELEW (MIESIĄC) FORMA PŁATNOŚCI']
+    .forEach(function(h,ci){ws[cols[ci]+(R+1)]=cell(h,fontHdr,alignCenterWrap,borderAll,ci>=5?yellowFill:null);});R++;
+  sel.forEach(function(m,i){
+    var mcd=cd[m.id]||{};
+    var active=concerts.filter(function(c){var cc=mcd[c.id];return cc&&cc.on;});
+    var datesStr=active.map(function(c){return c.date+(c.city?' w '+c.city:'');}).join(', ');
+    var tresc='Występ artystyczny w zespole '+a.name+' na koncertach - '+datesStr;
+    var totalN=concerts.reduce(function(s,c){var cc=mcd[c.id];return s+(cc&&cc.on&&cc.mode==='netto'?parseFloat(cc.fee)||0:0);},0);
+    var totalB=concerts.reduce(function(s,c){var cc=mcd[c.id];return s+(cc&&cc.on&&cc.mode==='brutto'?parseFloat(cc.fee)||0:0);},0);
+    [{v:i+1,al:alignCenter,fill:null},{v:m.name,al:alignLeftWrap,fill:null},{v:tresc,al:alignLeftWrap,fill:null},
+     {v:totalN||'',al:alignCenter,fill:null},{v:totalB||'',al:alignCenter,fill:null},
+     {v:'tak',al:alignCenter,fill:yellowFill},{v:'przelew',al:alignLeftWrap,fill:yellowFill}]
+    .forEach(function(d,ci){ws[cols[ci]+(R+1)]=cell(d.v,fontData,d.al,borderAll,d.fill);});R++;
+  });
+  ws['!ref']='A1:G'+R;
+  ws['!cols']=[{wch:4.5},{wch:22},{wch:52},{wch:14},{wch:15},{wch:21},{wch:19}];
+  ws['!rows']=[{hpt:18},{hpt:18},{hpt:18},{hpt:52}];
+  for(var ri=4;ri<R;ri++)ws['!rows'][ri]={hpt:42};
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'UOD');
+  XLSX.writeFile(wb,'UOD_'+a.name.replace(/\s+/g,'_')+'_'+(title.replace(/\s+/g,'_')||'zlecenie')+'.xlsx');
+}
+
+// ─── START ────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
