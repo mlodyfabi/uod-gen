@@ -728,7 +728,7 @@ function renderS3() {
     +'<div class="block-title" style="margin-bottom:0">Daty i miejsca koncertów</div>'
     +'<div style="display:flex;align-items:center;gap:8px">'
     +(concerts.length ? '<label style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--muted);cursor:pointer"><input type="checkbox" '+(allChecked?'checked':'')+' onchange="togAllC(this.checked)" style="width:15px;height:15px;accent-color:var(--danger)"> wszystkie</label>' : '')
-    +(anyChecked ? '<button class="btn-del" style="align-self:auto" onclick="askDelCheckedC()">🗑 Usuń zaznaczone</button>' : '')
+    +'<button class="btn-del" style="align-self:auto;opacity:'+(anyChecked?'1':'.35')+';cursor:'+(anyChecked?'pointer':'not-allowed')+'" '+(anyChecked?'onclick="askDelCheckedC()"':'')+'>🗑 Usuń zaznaczone</button>'
     +'</div></div>'
     +'<div id="cdef-list">';
   concerts.forEach(function(c){
