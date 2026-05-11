@@ -1011,13 +1011,20 @@ window.addEventListener('beforeinstallprompt', (e) => {
 function installPWA() {
   if (_installPrompt) {
     _installPrompt.prompt();
-    _installPrompt.userChoice.then(() => {
-      _installPrompt = null;
-      if (document.getElementById('s-profile').classList.contains('active')) renderProfile();
-    });
+    _installPrompt.userChoice.then(() => { _installPrompt = null; });
   } else {
-    toast('W Safari: udostępnij → "Dodaj do ekranu głównego"');
+    showInstallModal();
   }
+}
+
+function showInstallModal() {
+  var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  var body = isIOS
+    ? '1. Naciśnij <strong>🔗 Udostępnij</strong> na dole Safari<br><br>2. Wybierz <strong>„Dodaj do ekranu głównego"</strong><br><br>3. Naciśnij <strong>Dodaj</strong> w prawym górnym rogu'
+    : 'Otwórz tę stronę w <strong>Chrome</strong> lub <strong>Edge</strong> i użyj menu ⋮ → <strong>„Dodaj do ekranu głównego"</strong>';
+  openModal('📲 Dodaj do ekranu', body, null, null);
+  document.getElementById('modal-ok').style.display = 'none';
+  document.getElementById('modal').querySelector('.btn-cancel').textContent = 'OK, rozumiem';
 }
 
 // ─── START ────────────────────────────────────────────────────────────────────
