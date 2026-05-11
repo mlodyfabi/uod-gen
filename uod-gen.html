@@ -173,7 +173,8 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
         <div class="sync-dot" id="sync-dot"></div>
         <span id="sync-lbl"></span>
       </div>
-      <button class="btn-profile" id="btn-profile" onclick="goSettings()" style="display:none"></button>
+      <button class="btn-profile" id="btn-profile" onclick="goProfile()" style="display:none"></button>
+      <button class="btn-profile" id="btn-settings" onclick="goSettings()" style="display:none">✏</button>
     </div>
   </div>
   <div class="content-card">
@@ -250,10 +251,14 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
       </div>
     </div>
 
+    <div class="screen" id="s-profile">
+      <div class="settings-wrap">
+        <div id="set-profile-content"></div>
+      </div>
+    </div>
+
     <div class="screen" id="s-set">
       <div class="settings-wrap">
-        <div id="set-profile"></div>
-        <hr style="border:none;border-top:2px solid var(--border);margin:20px 0">
         <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:4px">Artyści</div>
         <div style="font-size:12px;color:var(--muted);margin-bottom:16px">Dwuklik na nazwie = edycja</div>
         <div id="set-list"></div>
@@ -350,9 +355,9 @@ function getUserDisplayName(user) {
 function updProfileBtn() {
   if (!currentUser) return;
   var btn = document.getElementById('btn-profile');
-  if (!btn) return;
-  btn.textContent = getUserInitials(currentUser);
-  btn.style.display = 'flex';
+  if (btn) { btn.textContent = getUserInitials(currentUser); btn.style.display = 'flex'; }
+  var btnS = document.getElementById('btn-settings');
+  if (btnS) btnS.style.display = 'flex';
 }
 
 function switchAuthMode() {
@@ -423,6 +428,8 @@ async function doSignOut() {
   editingMid = null; _newRole = 'main'; _newFeeMode = 'brutto'; _authMode = 'login';
   var btn = document.getElementById('btn-profile');
   if (btn) btn.style.display = 'none';
+  var btnS = document.getElementById('btn-settings');
+  if (btnS) btnS.style.display = 'none';
   document.getElementById('login-title').textContent = 'Zaloguj się';
   document.getElementById('btn-login').textContent = 'Zaloguj się';
   document.getElementById('l-pass2').style.display = 'none';
@@ -582,7 +589,8 @@ async function dbSave(fn) {
 
 // ─── NAVIGATION ───────────────────────────────────────────────────────────────
 function goS1() { show('s1'); renderS1(); bc([{label:'Artyści'}]); }
-function goSettings() { show('s-set'); renderSet(); bc([{label:'Artyści',fn:'goS1()'},{label:'Ustawienia'}]); }
+function goProfile() { show('s-profile'); renderProfile(); bc([{label:'Artyści',fn:'goS1()'},{label:'Profil'}]); }
+function goSettings() { show('s-set'); renderSet(); bc([{label:'Artyści',fn:'goS1()'},{label:'Edytuj artystów'}]); }
 function goS2(aid) {
   if (aid != null) state.aid = aid;
   editingMid = null;
@@ -859,18 +867,22 @@ async function addC(){
   } catch(e){setSyncState('err');toast('Błąd: '+(e.message||''),'err');}
 }
 
+// ─── S-PROFILE ────────────────────────────────────────────────────────────────
+function renderProfile() {
+  var el = document.getElementById('set-profile-content');
+  if (!el || !currentUser) return;
+  var dn = (currentUser.user_metadata && currentUser.user_metadata.display_name) || '';
+  el.innerHTML = '<div style="font-family:\'Syne\',sans-serif;font-size:20px;font-weight:800;margin-bottom:3px">Profil</div>'
+    + '<div style="font-size:12px;color:var(--muted);margin-bottom:14px">' + escQ(currentUser.email||'') + '</div>'
+    + '<div class="s-add" style="margin-top:0;margin-bottom:10px"><input class="s-add-inp" id="p-dname" placeholder="Nazwa wyświetlana" value="' + escQ(dn) + '"><button class="btn-g" onclick="saveDisplayName()">Zapisz</button></div>'
+    + '<div class="s-add" style="margin-top:0;margin-bottom:10px"><input class="s-add-inp" id="p-email" type="email" placeholder="Nowy email"><button class="btn-g" onclick="saveEmail()">Zapisz</button></div>'
+    + '<div class="s-add" style="margin-top:0;margin-bottom:14px"><input class="s-add-inp" id="p-pass" type="password" placeholder="Nowe hasło"><button class="btn-g" onclick="savePassword()">Zapisz</button></div>'
+    + '<button class="btn-logout" onclick="doSignOut()">Wyloguj</button>'
+    + '<div style="margin-top:16px"><button class="btn-o" onclick="goS1()">← Powrót do artystów</button></div>';
+}
+
 // ─── S-SET ────────────────────────────────────────────────────────────────────
 function renderSet(){
-  var profEl = document.getElementById('set-profile');
-  if (profEl && currentUser) {
-    var dn = (currentUser.user_metadata && currentUser.user_metadata.display_name) || '';
-    profEl.innerHTML = '<div style="font-family:\'Syne\',sans-serif;font-size:20px;font-weight:800;margin-bottom:3px">Profil</div>'
-      + '<div style="font-size:12px;color:var(--muted);margin-bottom:14px">' + escQ(currentUser.email||'') + '</div>'
-      + '<div class="s-add" style="margin-top:0;margin-bottom:10px"><input class="s-add-inp" id="p-dname" placeholder="Nazwa wyświetlana" value="' + escQ(dn) + '"><button class="btn-g" onclick="saveDisplayName()">Zapisz</button></div>'
-      + '<div class="s-add" style="margin-top:0;margin-bottom:10px"><input class="s-add-inp" id="p-email" type="email" placeholder="Nowy email"><button class="btn-g" onclick="saveEmail()">Zapisz</button></div>'
-      + '<div class="s-add" style="margin-top:0;margin-bottom:14px"><input class="s-add-inp" id="p-pass" type="password" placeholder="Nowe hasło"><button class="btn-g" onclick="savePassword()">Zapisz</button></div>'
-      + '<button class="btn-logout" onclick="doSignOut()">Wyloguj</button>';
-  }
   document.getElementById('set-list').innerHTML=D.artists.map(function(a){
     return '<div class="s-item" id="sa-'+a.id+'">'
       +'<span style="font-size:13px;font-weight:700;cursor:pointer;border-bottom:1.5px dashed transparent;transition:border-color .15s" '
