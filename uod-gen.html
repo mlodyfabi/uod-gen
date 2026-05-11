@@ -200,6 +200,14 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
             <span id="auth-switch-txt">Nie masz konta? </span><span id="auth-switch-lnk" onclick="switchAuthMode()" style="color:var(--orange);font-weight:700;cursor:pointer;text-decoration:underline;text-underline-offset:3px">Zarejestruj się</span>
           </div>
         </div>
+        <div id="pwa-install-hint" style="margin-top:24px;text-align:center">
+          <button onclick="installPWA()" style="background:rgba(255,255,255,0.15);border:2px solid rgba(255,255,255,0.4);border-radius:14px;padding:11px 22px;color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;backdrop-filter:blur(4px)">
+            📲 Dodaj do ekranu głównego
+          </button>
+          <div style="font-size:11px;color:rgba(255,255,255,0.6);margin-top:7px">
+            Działa jak aplikacja — bez przeglądarki
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1003,9 +1011,12 @@ window.addEventListener('beforeinstallprompt', (e) => {
 function installPWA() {
   if (_installPrompt) {
     _installPrompt.prompt();
-    _installPrompt.userChoice.then(() => { _installPrompt = null; renderProfile(); });
+    _installPrompt.userChoice.then(() => {
+      _installPrompt = null;
+      if (document.getElementById('s-profile').classList.contains('active')) renderProfile();
+    });
   } else {
-    toast('Otwórz w Safari/Chrome i użyj "Dodaj do ekranu głównego"');
+    toast('W Safari: udostępnij → "Dodaj do ekranu głównego"');
   }
 }
 
