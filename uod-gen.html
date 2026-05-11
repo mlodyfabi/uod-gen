@@ -885,6 +885,7 @@ function renderProfile() {
     + '<div class="s-add" style="margin-top:0;margin-bottom:10px"><input class="s-add-inp" id="p-dname" placeholder="Nazwa wyświetlana" value="' + escQ(dn) + '"><button class="btn-g" onclick="saveDisplayName()">Zapisz</button></div>'
     + '<div class="s-add" style="margin-top:0;margin-bottom:10px"><input class="s-add-inp" id="p-email" type="email" placeholder="Nowy email"><button class="btn-g" onclick="saveEmail()">Zapisz</button></div>'
     + '<div class="s-add" style="margin-top:0;margin-bottom:14px"><input class="s-add-inp" id="p-pass" type="password" placeholder="Nowe hasło"><button class="btn-g" onclick="savePassword()">Zapisz</button></div>'
+    + '<div style="margin-bottom:10px"><button class="btn-o" style="width:100%" onclick="installPWA()">📲 Dodaj do ekranu głównego</button></div>'
     + '<button class="btn-logout" onclick="doSignOut()">Wyloguj</button>'
     + '<div style="margin-top:16px"><button class="btn-o" onclick="goS1()">← Powrót do artystów</button></div>';
 }
@@ -990,6 +991,22 @@ function genXlsx(){
   var wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'UOD');
   XLSX.writeFile(wb,'UOD_'+a.name.replace(/\s+/g,'_')+'_'+(title.replace(/\s+/g,'_')||'zlecenie')+'.xlsx');
+}
+
+// ─── PWA INSTALL ─────────────────────────────────────────────────────────────
+let _installPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  _installPrompt = e;
+});
+
+function installPWA() {
+  if (_installPrompt) {
+    _installPrompt.prompt();
+    _installPrompt.userChoice.then(() => { _installPrompt = null; renderProfile(); });
+  } else {
+    toast('Otwórz w Safari/Chrome i użyj "Dodaj do ekranu głównego"');
+  }
 }
 
 // ─── START ────────────────────────────────────────────────────────────────────
