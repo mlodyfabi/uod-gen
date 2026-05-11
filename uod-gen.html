@@ -30,12 +30,11 @@
 @keyframes spin{to{transform:rotate(360deg)}}
 html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text)}
 .app{height:100vh;display:flex;flex-direction:column;background:var(--bg);position:relative;max-width:680px;margin:0 auto}
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 12px;flex-shrink:0}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 20px 12px;flex-shrink:0;padding-top:max(14px,calc(env(safe-area-inset-top) + 8px))}
 .logo{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:1px;color:#fff}
 .logo span{color:var(--green-m)}
-.breadcrumb{display:flex;align-items:center;gap:5px;font-size:12px;color:rgba(255,255,255,.8)}
-.crumb{cursor:pointer;color:#fff;font-weight:700;text-decoration:underline;text-underline-offset:3px}
-.crumb:hover{color:var(--green-m)}
+.btn-back-top{background:rgba(255,255,255,0.18);border:none;border-radius:10px;padding:6px 12px;color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-back-top:active{opacity:.7}
 .topbar-right{display:flex;align-items:center;gap:10px}
 .sync-indicator{display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,.7);font-weight:600}
 .sync-dot{width:7px;height:7px;border-radius:50%;background:var(--green-m);transition:background .3s;flex-shrink:0}
@@ -96,7 +95,7 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
 .add-m-inp::-webkit-inner-spin-button,.add-m-inp::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 .add-m-inp:focus{border-color:var(--orange)}
 .add-m-row2{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.footer-bar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px 14px;border-top:2px solid var(--border);flex-shrink:0;background:#fff;gap:8px}
+.footer-bar{display:flex;align-items:center;justify-content:space-between;padding:12px 20px 14px;border-top:2px solid var(--border);flex-shrink:0;background:#fff;gap:8px;padding-bottom:max(14px,calc(env(safe-area-inset-bottom) + 8px))}
 .sel-badge{font-size:12px;color:var(--green);font-weight:700;background:var(--green-l);padding:5px 13px;border-radius:20px;border:2px solid var(--green-m);white-space:nowrap}
 .btn-g{background:var(--green);color:#fff;border:none;border-radius:11px;padding:10px 22px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .18s;white-space:nowrap}
 .btn-g:hover{background:var(--green-d);transform:translateY(-2px);box-shadow:0 5px 16px rgba(26,122,74,.28)}
@@ -175,7 +174,7 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--bg);colo
 <div class="app" id="app">
   <div class="topbar">
     <div class="logo">UOD<span style="color:var(--green-m)">•</span>GEN</div>
-    <div class="breadcrumb" id="breadcrumb"></div>
+    <button class="btn-back-top" id="btn-back-top" style="display:none" onclick="breadcrumbBack()"></button>
     <div class="topbar-right">
       <div class="sync-indicator">
         <div class="sync-dot" id="sync-dot"></div>
@@ -518,13 +517,31 @@ function show(id) {
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
   document.getElementById(id).classList.add('active');
 }
+var _navFns = {};
+function _registerNavFns() {
+  _navFns = { 'goS1()': goS1, 'goS2()': goS2, 'goS3()': goS3, 'goSettings()': goSettings, 'goProfile()': goProfile };
+}
+
 function bc(items) {
-  document.getElementById('breadcrumb').innerHTML = items.map(function(it,i){
-    return (i ? '<span style="color:rgba(255,255,255,.4);margin:0 3px">›</span>' : '')
-      + (it.fn
-        ? '<span class="crumb" onclick="'+it.fn+'">'+it.label+'</span>'
-        : '<span style="opacity:.55">'+it.label+'</span>');
-  }).join('');
+  var btn = document.getElementById('btn-back-top');
+  if (!btn) return;
+  var backItem = null;
+  for (var i = items.length - 2; i >= 0; i--) {
+    if (items[i].fn) { backItem = items[i]; break; }
+  }
+  if (backItem) {
+    btn.style.display = 'flex';
+    btn.innerHTML = '← ' + backItem.label;
+    btn._backFn = backItem.fn;
+  } else {
+    btn.style.display = 'none';
+    btn._backFn = null;
+  }
+}
+
+function breadcrumbBack() {
+  var btn = document.getElementById('btn-back-top');
+  if (btn && btn._backFn && _navFns[btn._backFn]) _navFns[btn._backFn]();
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
@@ -1028,6 +1045,7 @@ function showInstallModal() {
 }
 
 // ─── START ────────────────────────────────────────────────────────────────────
+_registerNavFns();
 init();
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
