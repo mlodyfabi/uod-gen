@@ -1,6 +1,6 @@
 {
-  "name": "UOD·GEN",
-  "short_name": "UOD·GEN",
+  "name": "UOD•GEN",
+  "short_name": "UOD•GEN",
   "description": "Generator umów o dzieło dla muzyków",
   "start_url": "/uod-gen.html",
   "display": "standalone",
