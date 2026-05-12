@@ -997,17 +997,26 @@ function genXlsx(){
   });
   ['LP','IMIĘ I NAZWISKO','TREŚĆ UMOWY/RACHUNKU/DATA I MIEJSCE KONCERTU','SUMA NETTO','SUMA BRUTTO','50%-owe koszty uzyskania przychodu TAK/NIE*','PRZELEW (MIESIĄC) FORMA PŁATNOŚCI']
     .forEach(function(h,ci){ws[cols[ci]+(R+1)]=cell(h,fontHdr,alignCenterWrap,borderAll,ci>=5?yellowFill:null);});R++;
-  sel.forEach(function(m,i){
+  var lp=0;
+  sel.forEach(function(m){
     var mcd=cd[m.id]||{};
-    var active=concerts.filter(function(c){var cc=mcd[c.id];return cc&&cc.on;});
-    var datesStr=active.map(function(c){return c.date+(c.city?' '+c.city:'');}).join(', ');
-    var tresc='Występ artystyczny w zespole '+a.name+' na koncertach - '+datesStr;
-    var totalN=concerts.reduce(function(s,c){var cc=mcd[c.id];return s+(cc&&cc.on&&cc.mode==='netto'?parseFloat(cc.fee)||0:0);},0);
-    var totalB=concerts.reduce(function(s,c){var cc=mcd[c.id];return s+(cc&&cc.on&&cc.mode==='brutto'?parseFloat(cc.fee)||0:0);},0);
-    [{v:i+1,al:alignCenter,fill:null},{v:m.name,al:alignLeftWrap,fill:null},{v:tresc,al:alignLeftWrap,fill:null},
-     {v:totalN||'',al:alignCenter,fill:null},{v:totalB||'',al:alignCenter,fill:null},
-     {v:'tak',al:alignCenter,fill:yellowFill},{v:'przelew',al:alignLeftWrap,fill:yellowFill}]
-    .forEach(function(d,ci){ws[cols[ci]+(R+1)]=cell(d.v,fontData,d.al,borderAll,d.fill);});R++;
+    var bruttoC=concerts.filter(function(c){var cc=mcd[c.id];return cc&&cc.on&&cc.mode==='brutto';});
+    var nettoC=concerts.filter(function(c){var cc=mcd[c.id];return cc&&cc.on&&cc.mode==='netto';});
+    function mkRow(arr,mode){
+      if(!arr.length)return;
+      lp++;
+      var datesStr=arr.map(function(c){return c.date+(c.city?' '+c.city:'');}).join(', ');
+      var tresc='Występ artystyczny w zespole '+a.name+' na koncertach - '+datesStr;
+      var total=arr.reduce(function(s,c){return s+(parseFloat((mcd[c.id]||{}).fee)||0);},0);
+      var vN=mode==='netto'?total:'';
+      var vB=mode==='brutto'?total:'';
+      [{v:lp,al:alignCenter,fill:null},{v:m.name,al:alignLeftWrap,fill:null},{v:tresc,al:alignLeftWrap,fill:null},
+       {v:vN,al:alignCenter,fill:null},{v:vB,al:alignCenter,fill:null},
+       {v:'tak',al:alignCenter,fill:yellowFill},{v:'przelew',al:alignLeftWrap,fill:yellowFill}]
+      .forEach(function(d,ci){ws[cols[ci]+(R+1)]=cell(d.v,fontData,d.al,borderAll,d.fill);});R++;
+    }
+    mkRow(bruttoC,'brutto');
+    mkRow(nettoC,'netto');
   });
   ws['!ref']='A1:G'+R;
   ws['!cols']=[{wch:4.5},{wch:22},{wch:52},{wch:14},{wch:15},{wch:21},{wch:19}];
