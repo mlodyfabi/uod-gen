@@ -509,7 +509,7 @@ function toast(msg, type) {
   _toastTimer = setTimeout(function(){t.remove();}, 2600);
 }
 
-function escQ(s) { return (s||'').replace(/&/g,'&amp;').replace(/'/g,'&#39;').replace(/"/g,'&quot;'); }
+function escQ(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;').replace(/"/g,'&quot;'); }
 const ini = function(n){ return n.split(' ').map(function(w){return w[0];}).join('').substring(0,2).toUpperCase(); };
 
 // ─── SHOW SCREEN ──────────────────────────────────────────────────────────────
@@ -613,10 +613,12 @@ async function dbSave(fn) {
     var res = await fn();
     if (res && res.error) throw res.error;
     setSyncState('ok');
+    return true;
   } catch(e) {
     console.error(e);
     setSyncState('err');
     toast('Błąd zapisu: ' + (e.message||'nieznany'), 'err');
+    return false;
   }
 }
 
@@ -636,6 +638,7 @@ function goS2(aid) {
 function goS3() {
   cd = {};
   _cSel = {};
+  zt = '';
   show('s3'); renderS3();
   var a = D.artists.find(function(x){return x.id===state.aid;});
   bc([{label:'Artyści',fn:'goS1()'},{label:a?a.name:'',fn:'goS2()'},{label:'Zlecenie'}]);
@@ -768,9 +771,8 @@ function setRole(mid, r) {
 
 function askDelM(mid, name) {
   openModal('Usuń muzyka?','Czy na pewno chcesz usunąć<br><strong>'+name+'</strong>?', async function(){
-    await dbSave(function(){return sb.from('uod_musicians').delete().eq('id',mid);});
-    D.musicians[state.aid] = D.musicians[state.aid].filter(function(x){return x.id!==mid;});
-    renderS2(true);
+    var ok = await dbSave(function(){return sb.from('uod_musicians').delete().eq('id',mid);});
+    if (ok) { D.musicians[state.aid] = D.musicians[state.aid].filter(function(x){return x.id!==mid;}); renderS2(true); }
   });
 }
 
@@ -962,10 +964,8 @@ async function addArtist(){
 
 function askDelA(id,name){
   openModal('Usuń artystę?','Czy na pewno chcesz usunąć<br><strong>'+name+'</strong>?<br><span style="font-size:11px;color:#aaa">Zostaną usunięci też wszyscy muzycy i koncerty.</span>', async function(){
-    await dbSave(function(){return sb.from('uod_artists').delete().eq('id',id);});
-    D.artists=D.artists.filter(function(a){return a.id!==id;});
-    delete D.musicians[id]; delete D.concerts[id];
-    renderSet();
+    var ok = await dbSave(function(){return sb.from('uod_artists').delete().eq('id',id);});
+    if (ok) { D.artists=D.artists.filter(function(a){return a.id!==id;}); delete D.musicians[id]; delete D.concerts[id]; renderSet(); }
   });
 }
 
