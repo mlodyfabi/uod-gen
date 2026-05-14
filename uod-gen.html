@@ -688,10 +688,10 @@ function mHTML(m, delay) {
   var nCls = 'mini-tog-btn '+(fm==='netto'?'on-g':'off');
   var mid = m.id;
   var nameBlock = isEditingName
-    ? '<input class="m-name-input" id="en-'+mid+'" value="'+escQ(m.name)+'" onblur="saveEditField(\''+mid+'\',\'name\')" onkeydown="if(event.key===\'Enter\'||event.key===\'Escape\')this.blur()"><span class="m-inst-display" ondblclick="startEdit(\''+mid+'\',\'inst\')">'+m.inst+'</span>'
+    ? '<input class="m-name-input" id="en-'+mid+'" value="'+escQ(m.name)+'" onblur="saveEditField(\''+mid+'\',\'name\')" onkeydown="if(event.key===\'Enter\'||event.key===\'Escape\')this.blur()"><span class="m-inst-display" ondblclick="startEdit(\''+mid+'\',\'inst\')" style="'+(m.inst?'':'color:var(--muted);font-style:italic')+'">'+(m.inst||'dwuklik = instrument')+'</span>'
     : isEditingInst
     ? '<span class="m-name-display" ondblclick="startEdit(\''+mid+'\',\'name\')">'+m.name+'</span><input class="m-inst-input" id="ei-'+mid+'" value="'+escQ(m.inst)+'" onblur="saveEditField(\''+mid+'\',\'inst\')" onkeydown="if(event.key===\'Enter\'||event.key===\'Escape\')this.blur()">'
-    : '<span class="m-name-display" ondblclick="startEdit(\''+mid+'\',\'name\')">'+m.name+'</span><span class="m-inst-display" ondblclick="startEdit(\''+mid+'\',\'inst\')">'+m.inst+'</span>';
+    : '<span class="m-name-display" ondblclick="startEdit(\''+mid+'\',\'name\')">'+m.name+'</span><span class="m-inst-display" ondblclick="startEdit(\''+mid+'\',\'inst\')" style="'+(m.inst?'':'color:var(--muted);font-style:italic')+'">'+(m.inst||'dwuklik = instrument')+'</span>';
   return '<div class="m-row'+(m.sel?' sel':'')+'" id="mr-'+mid+'" style="'+(delay?'animation:bounceIn .3s ease '+delay+'s both':'')+'">'
     +'<input type="checkbox" '+(m.sel?'checked':'')+' onchange="togM(\''+mid+'\',this.checked)">'
     +'<div class="m-body"><div class="m-names">'+nameBlock+'</div>'
